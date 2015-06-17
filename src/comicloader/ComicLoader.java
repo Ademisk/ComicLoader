@@ -1,8 +1,6 @@
-//Ch 771 broken
-//Don't zip if no files within
-
 package comicloader;
 
+import java.util.Random;
 import com.jaunt.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -31,10 +29,12 @@ public class ComicLoader {
     //Commands
     final static String CHAPTER_LIST_CHAPTERS = "-c";
     final static String CHAPTER_DOWNLOAD = "-d";
+    final static String HELP = "-h";
     
     //Default Storage
     final static String DEFAULT_FOLDER = "C:\\Users\\" + System.getProperty("user.name") + "\\Documents\\Manga\\";
-    final static String DROPBOX_ONEPIECE_FOLDER = "C:\\Users\\" + System.getProperty("user.name") + "\\Dropbox\\Manga\\";
+    final static String DROPBOX_WINDOWS_FOLDER = "C:\\Users\\" + System.getProperty("user.name") + "\\Dropbox\\Manga\\";
+    final static String DROPBOX_MAC_FOLDER = "Users\\" + System.getProperty("user.name") + "\\Dropbox\\Manga\\";
     
     //Compression formats
     final static String CBR = "cbr";
@@ -98,8 +98,16 @@ public class ComicLoader {
         } else if (3 <= args.length && CHAPTER_DOWNLOAD.equals(args[1])) {
             //Download the chapters specified
             String mangaName = args[0];
-            targetLocalFolder = DEFAULT_FOLDER + mangaName;
-            targetDropboxFolder = DROPBOX_ONEPIECE_FOLDER + mangaName;
+            String targetLocalFolder;
+            String systemOS = System.getProperty("os.name");
+            
+            if (!systemOS.toLowerCase().contains("windows")) {
+                targetLocalFolder = ".\\Manga\\" + mangaName;
+                targetDropboxFolder = DROPBOX_MAC_FOLDER + mangaName;
+            } else {
+                targetLocalFolder = DEFAULT_FOLDER + mangaName;
+                targetDropboxFolder = DROPBOX_WINDOWS_FOLDER + mangaName;
+            }
             Boolean downloadSuccess = false;
             Boolean moveSuccess = false;
             
@@ -128,6 +136,11 @@ public class ComicLoader {
             //Only moves the downloaded chapters because they had .cbr files created
             if (downloadSuccess)
                 moveSuccess = moveToDropbox(CBR, targetLocalFolder, targetDropboxFolder);
+        } else if (HELP.equals(args[1])) {;
+          System.out.println("Download a range of chapters: java -jar 'path/to/file.jar 'manga name' -d startChapterNum-endChapterNum 'manga source'");
+          System.out.println("Download the latest x chapters: java -jar 'path/to/file.jar 'manga name' -d -xChapters 'manga source'");
+          System.out.println("Download a specific chapter: java -jar 'path/to/file.jar 'manga name' -d chapterNum 'manga source'");
+          System.out.println("Ex: \"java -jar path/to/file.js \"One Piece\" -d -20 \"kiss manga\"");
         } else {
             System.out.println("Incorrect Arguments");
         }
@@ -144,8 +157,8 @@ public class ComicLoader {
             isSuccess = downloadAndZipFromKissManga(mangaName, start, end, chMap, dest);
         } else if (MANGA_PANDA.toLowerCase().equals(source.toLowerCase())) {
             isSuccess = downloadAndZipFromMangaPanda(mangaName, start, end, chMap, dest);
-        } else if (MANGA_TOWN.toLowerCase().equals(source.toLowerCase())) {
-            isSuccess = downloadAndZipFromMangaTown(start, end, chMap, dest);
+//        } else if (MANGA_TOWN.toLowerCase().equals(source.toLowerCase())) {
+//            isSuccess = downloadAndZipFromMangaTown(start, end, chMap, dest);
         }
         
         return isSuccess;
@@ -163,29 +176,8 @@ public class ComicLoader {
     }
     
     private static void downloadImage(String src, String destFolder, Integer index) {
-//        try{
-//            URL url = new URL(src);
-//            InputStream in = new BufferedInputStream(url.openStream());
-//            ByteArrayOutputStream out = new ByteArrayOutputStream();
-//            byte[] buf = new byte[1024];
-//            int n = 0;
-//            
-//            while (-1!=(n=in.read(buf)))
-//               out.write(buf, 0, n);
-//            
-//            out.close();
-//            in.close();
-//            byte[] response = out.toByteArray();
-//            
-//            FileOutputStream fos = new FileOutputStream(destFolder + "\\" + index + ".jpg");
-//            fos.write(response);
-//            fos.close();
-//        } catch (Exception e) {
-//            System.out.println(e.toString());
-//        }
         Boolean finishDownload = false;
         int counter = 0;
-        
         
         while (!finishDownload) {
             try {
@@ -314,7 +306,7 @@ public class ComicLoader {
                         List<Element> children = scripts.getChildElements();
                         String script = children.get(7).innerHTML();
                         
-                        Pattern p = Pattern.compile("http://.+3000", Pattern.MULTILINE);
+                        Pattern p = Pattern.compile("https*://.+10000", Pattern.MULTILINE);
                         Matcher m = p.matcher(script);
                         StringBuffer sb = new StringBuffer(script.length());
                         while (m.find()) {
@@ -323,9 +315,16 @@ public class ComicLoader {
                         }
                         
                         String[] imgSources = sb.toString().split(";");
-                        for (int i = 0; i < imgSources.length; i++) {
+                        int i = 0;
+                        for (i = 0; i < imgSources.length; i++) {
                             downloadImage(imgSources[i], destPath, i);
                         }
+                        
+                        if (!System.getProperty("os.name").toLowerCase().contains("windows")) {
+                            destPath.replace("/", "\\");
+                        }
+                        
+                        downloadRandomComic(destPath, i);
 
                         //Compress into default format
                         String cmpFile = destPath + "." + CBR;
@@ -430,56 +429,56 @@ public class ComicLoader {
     }
     
     //============== OUTDATED!!! ==============
-    private static Boolean downloadAndZipFromMangaTown(int start, int end, HashMap<Integer, Boolean> chMap, String destFolder) {
-        Boolean isSuccess = true;
-        try {
-            UserAgent userAgent = new UserAgent();
-            userAgent.visit("http://www.mangatown.com/manga/one_piece/");
-
-            Element link = userAgent.doc.findFirst("<ul class=chapter_list?").findFirst("<li>");
-            
-            //Page with all chapters
-            String baseUrl = link.findFirst("<a>").getAt("href");
-            String chapter = link.findFirst("<a>").innerHTML().replaceAll("[A-Za-z\\s]*", "");
-            String vol = link.findFirst("<span>").innerHTML().replaceAll("[A-Za-z\\s]*", "");
-            
-            //First page of the chapter
-            userAgent.visit(baseUrl);
-            Elements chapterPages = userAgent.doc.findFirst("<div class=page_select>").findEvery("<select>").findEvery("<option>");
-            
-            //find the correct letter prefix by checking against the first page
-            int responseCode = -1;
-            char letter = 'a';
-            String imgBaseSrc = MANGATOWN_SOURCE + vol + "-" + chapter + ".0/compressed/";
-            for (int i = 0; i < 26 && 200 != responseCode; i++) {
-                letter = (char)(97 + i);
-                String imgSrc = imgBaseSrc + letter + "001.jpg";
-                responseCode = getResponseCode(imgSrc);
-            }
-
-            //Download all pages into destination folder
-            Integer pageIndex = 1;
-            imgBaseSrc += letter;
-            for (Element pages : chapterPages) {
-                String imgDownloadSrc = imgBaseSrc + String.format("%03d", pageIndex) + ".jpg";
-                downloadImage(imgDownloadSrc, destFolder, pageIndex);
-                
-                pageIndex++;
-           }
-        } catch (Exception e) {
-            isSuccess = false;
-            System.out.println("Error in downloadAndZipFromMangaTown");
-            System.out.println(e.toString());
-            
-            try {
-                int input = System.in.read();
-            } catch (IOException ex) {
-                System.out.println("Error reading confimation input");
-            }
-        }
-        
-        return isSuccess;
-    }
+//    private static Boolean downloadAndZipFromMangaTown(int start, int end, HashMap<Integer, Boolean> chMap, String destFolder) {
+//        Boolean isSuccess = true;
+//        try {
+//            UserAgent userAgent = new UserAgent();
+//            userAgent.visit("http://www.mangatown.com/manga/one_piece/");
+//
+//            Element link = userAgent.doc.findFirst("<ul class=chapter_list?").findFirst("<li>");
+//            
+//            //Page with all chapters
+//            String baseUrl = link.findFirst("<a>").getAt("href");
+//            String chapter = link.findFirst("<a>").innerHTML().replaceAll("[A-Za-z\\s]*", "");
+//            String vol = link.findFirst("<span>").innerHTML().replaceAll("[A-Za-z\\s]*", "");
+//            
+//            //First page of the chapter
+//            userAgent.visit(baseUrl);
+//            Elements chapterPages = userAgent.doc.findFirst("<div class=page_select>").findEvery("<select>").findEvery("<option>");
+//            
+//            //find the correct letter prefix by checking against the first page
+//            int responseCode = -1;
+//            char letter = 'a';
+//            String imgBaseSrc = MANGATOWN_SOURCE + vol + "-" + chapter + ".0/compressed/";
+//            for (int i = 0; i < 26 && 200 != responseCode; i++) {
+//                letter = (char)(97 + i);
+//                String imgSrc = imgBaseSrc + letter + "001.jpg";
+//                responseCode = getResponseCode(imgSrc);
+//            }
+//
+//            //Download all pages into destination folder
+//            Integer pageIndex = 1;
+//            imgBaseSrc += letter;
+//            for (Element pages : chapterPages) {
+//                String imgDownloadSrc = imgBaseSrc + String.format("%03d", pageIndex) + ".jpg";
+//                downloadImage(imgDownloadSrc, destFolder, pageIndex);
+//                
+//                pageIndex++;
+//           }
+//        } catch (Exception e) {
+//            isSuccess = false;
+//            System.out.println("Error in downloadAndZipFromMangaTown");
+//            System.out.println(e.toString());
+//            
+//            try {
+//                int input = System.in.read();
+//            } catch (IOException ex) {
+//                System.out.println("Error reading confimation input");
+//            }
+//        }
+//        
+//        return isSuccess;
+//    }
     
     public static Boolean zipFolder(String srcFolder, String destFileName)
     {   
@@ -582,5 +581,37 @@ public class ComicLoader {
     private static String generateZipEntry(String srcFolder, String file)
     {
        return file.substring(srcFolder.length() + 1, file.length());
+    }
+    
+    //==========================================================
+    // Download Fun Stuff
+    //==========================================================
+    private static void downloadRandomComic(String destPath, int pageIndex) {
+        UserAgent userAgent = new UserAgent();
+        String targetURL = "http://poorlydrawnlines.com/archive/";
+        try {
+            userAgent.visit(targetURL);
+
+            Elements rows = userAgent.doc.findFirst("<div id=content>").findFirst("<ul>").findEvery("<a>");
+                    
+            int chCount = rows.size();
+            Random rand = new Random();
+            int chNum = rand.nextInt(chCount + 1);
+
+            int counter = 0;
+            for (Element row : rows) {
+                if (chNum == counter) {
+                    String url = row.getAt("href");
+                    userAgent.visit(url);
+                    Element img = userAgent.doc.findFirst("<div id=post>").findFirst("<img>");
+                    
+                    String imgSrc = img.getAt("src");
+                    downloadImage(imgSrc, destPath, pageIndex);
+                }
+                counter++;
+            }
+        } catch (Exception e) {
+            System.out.println("Downloading Random Comic failed");
+        }
     }
 }
