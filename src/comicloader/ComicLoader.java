@@ -22,8 +22,11 @@ import java.util.ArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.imageio.*;
-
+import java.util.concurrent.*;
+        
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.lang3.time.StopWatch;
 
 public class ComicLoader {
     //Commands
@@ -144,6 +147,13 @@ public class ComicLoader {
         } else {
             System.out.println("Incorrect Arguments");
         }
+        
+        System.out.println("Press any key to continue...");
+        try {
+            System.in.read();
+        } catch (Exception ex) {
+            System.out.println(ex.toString());
+        }
     }
     
     public static void fetchChapterList(int count) {
@@ -254,6 +264,7 @@ public class ComicLoader {
         Boolean downloadSuccess = true;
         Boolean zipSuccess = true;
         String specialChars = "[<>\"\\/\\|?*.]";
+        Boolean chapterDownloaded = false;
         
         int rowIndex = 0;
         String html = "";
@@ -285,7 +296,7 @@ public class ComicLoader {
             //Page with all chapters
             for (Element row : rows) {
                 if (0 != rowIndex && 1 != rowIndex) {   //1st row is header tr, second row is a styling tr
-                    html = row.findFirst("<td>").innerHTML();
+                    html = StringEscapeUtils.unescapeHtml3(row.findFirst("<td>").innerHTML());
                     String num = html.replaceAll("\\s.+\\s+" + mangaName + " ([0-9]+).*</a>", "$1").trim();
                     if (html.contains("Vol.")) {    //Skip all Volumes
                         continue;
@@ -293,6 +304,7 @@ public class ComicLoader {
                     int chNumber = Integer.parseInt(num);
 
                     if (start <= chNumber && chNumber <= end && !chMap.containsKey(chNumber) && zipSuccess) {
+                        chapterDownloaded = true;
                         System.out.println("\nDownloading chapter " + chNumber);
                         String baseUrl = row.findFirst("<td>").findFirst("<a>").getAt("href");
                         String chName = " " + html.replaceAll("(?s)\\s.+\\s" + mangaName + " [0-9]+(.*)</a>", "$1").replaceAll(":", "-").replaceAll(specialChars, "").trim();
@@ -302,11 +314,10 @@ public class ComicLoader {
 
                         //Go to the page with all of the images
                         userAgent.visit(baseUrl);
-                        Elements scripts = userAgent.doc.findEvery("<script");
-                        List<Element> children = scripts.getChildElements();
-                        String script = children.get(7).innerHTML();
+                        Elements scripts = userAgent.doc.findEvery("<script type=\"text/javascript\">var lstImages");
+                        String script = scripts.getChildElements().get(0).innerHTML();
                         
-                        Pattern p = Pattern.compile("https*://.+10000", Pattern.MULTILINE);
+                        Pattern p = Pattern.compile("https*://.+\\d+", Pattern.MULTILINE);
                         Matcher m = p.matcher(script);
                         StringBuffer sb = new StringBuffer(script.length());
                         while (m.find()) {
@@ -344,6 +355,10 @@ public class ComicLoader {
             } catch (IOException ex) {
                 System.out.println("Error reading confimation input");
             }
+        }
+        
+        if (!chapterDownloaded) {
+            System.out.println("No chapters to download.");
         }
         
         return downloadSuccess && zipSuccess;
