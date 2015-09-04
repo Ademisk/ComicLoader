@@ -607,18 +607,23 @@ public class ComicLoader {
         try {
             userAgent.visit(targetURL);
 
-            Elements rows = userAgent.doc.findFirst("<div id=content>").findFirst("<ul>").findEvery("<a>");
+            Element wrapper = userAgent.doc.findEvery("<div class=wrapper>");
+            Element page = wrapper.findFirst("<div>");
+//            Element ul = page.findFirst("<ul>");
+//            Elements li = ul.findEvery("<li>");
+            Elements href = page.findEvery("<a>");
+            //Elements rows = userAgent.doc.findFirst("<div class=wrapper>").findFirst("<div>").findFirst("<ul>").findEvery("<li>").findEvery("<a>");
                     
-            int chCount = rows.size();
+            int chCount = href.size();
             Random rand = new Random();
             int chNum = rand.nextInt(chCount + 1);
 
             int counter = 0;
-            for (Element row : rows) {
+            for (Element row : href) {
                 if (chNum == counter) {
                     String url = row.getAt("href");
                     userAgent.visit(url);
-                    Element img = userAgent.doc.findFirst("<div id=post>").findFirst("<img>");
+                    Element img = userAgent.doc.findFirst("<div class=post>").findFirst("<img>");
                     
                     String imgSrc = img.getAt("src");
                     downloadImage(imgSrc, destPath, pageIndex);
