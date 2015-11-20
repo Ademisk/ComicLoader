@@ -43,9 +43,10 @@ public class ComicLoader {
     final static String CBR = "cbr";
     
     //Manga Providers
-    final static String KISS_MANGA = "Kiss Manga";
+    final static String KISS_MANGA = "Kiss Manga";      //Blocks mini browsers, validates by cookie (can't spoof)
     final static String MANGA_PANDA = "Manga Panda";
-    final static String MANGA_TOWN = "Manga Town";
+    final static String MANGA_TOWN = "Manga Town";      //For some reason dead
+    final static String MY_MANGA_ONLINE = "My Manga Online";
     
     static String targetLocalFolder;
     static String targetDropboxFolder;
@@ -54,12 +55,13 @@ public class ComicLoader {
     final static String MANGATOWN_SOURCE = "temp";
     final static String MANGAPANDA_SOURCE = "http://www.mangapanda.com";
     final static String KISSMANGA_SOURCE = "http://kissmanga.com";
+    final static String MY_MANGA_ONLINE_SOURCE = "http://www.mymangaonline.com";
     
     //Parameters
     //args[0] - "Manga Name": "Bleach", "One Piece"
     //args[1] - Action to take. '-c' (chapter list) or '-d' (download chapters)
     //args[2] - Chapter numbers. Specific: '59', Range: '1-100', Last n: '-n'
-    //args[3] - "Source Site": "KISSMANGA", "MANGAPANDA"
+    //args[3] - "Source Site": "KISSMANGA", "MANGAPANDA", "MY MANGA ONLINE"
     public static void main(String[] args) {        
         mainController(args);
     }
@@ -163,7 +165,9 @@ public class ComicLoader {
     public static Boolean downloadChapters(String mangaName, int start, int end, HashMap<Integer, Boolean> chMap, String source, String dest) {
         Boolean isSuccess = false;
         System.out.println("Beginning chapter download from " + source + "...");
-        if (KISS_MANGA.toLowerCase().equals(source.toLowerCase())) {
+        if (MY_MANGA_ONLINE.toLowerCase().equals(source.toLowerCase())) {
+            isSuccess = downloadAndZipFromMyMangaOnline(mangaName, start, end, chMap, dest);
+        } else if (KISS_MANGA.toLowerCase().equals(source.toLowerCase())) {
             isSuccess = downloadAndZipFromKissManga(mangaName, start, end, chMap, dest);
         } else if (MANGA_PANDA.toLowerCase().equals(source.toLowerCase())) {
             isSuccess = downloadAndZipFromMangaPanda(mangaName, start, end, chMap, dest);
@@ -260,7 +264,7 @@ public class ComicLoader {
         return moveSuccess;
     }
     
-    private static Boolean downloadAndZipFromKissManga(String mangaName, int start, int end, HashMap<Integer, Boolean> chMap, String destFolder) {
+    private static Boolean downloadAndZipFromMyMangaOnline(String mangaName, int start, int end, HashMap<Integer, Boolean> chMap, String destFolder) {
         Boolean downloadSuccess = true;
         Boolean zipSuccess = true;
         String specialChars = "[<>\"\\/\\|?*.]";
@@ -270,7 +274,112 @@ public class ComicLoader {
         String html = "";
         try {
             UserAgent userAgent = new UserAgent();
-            String targetURL = KISSMANGA_SOURCE + "/Manga/" + mangaName.replaceAll("\\s", "-");
+            String targetURL = MY_MANGA_ONLINE_SOURCE + "/manga-info/" + mangaName.replace(" ", "-") + ".html";
+            userAgent.visit(targetURL);
+            
+            Elements rows = userAgent.doc.findEvery("<div class=item-chapter>");
+            
+            //If 'last n' download mode, get the last chapter number and calculate the chapter range
+            if (Integer.MAX_VALUE == end) {
+                List<Element> rws = rows.toList();
+                int lastChNum = Integer.parseInt(rws.get(0).findFirst("<a>").innerHTML().replaceAll("[^\\d]*([\\d]{1,3}).*", "$1"));
+                
+                start = lastChNum - (end - start) + 1;
+                end = lastChNum;
+            }
+            
+            //Manga list of chapters
+            for (Element row : rows) {
+                html = row.findFirst("<a>").innerHTML();
+                
+                if (html.indexOf(mangaName) < 0)
+                    continue;
+                
+                int chNumber = Integer.parseInt(html.replaceAll("[^\\d]*([\\d]{1,3}).*", "$1"));
+
+                if (start <= chNumber && chNumber <= end && !chMap.containsKey(chNumber) && zipSuccess) {
+                    chapterDownloaded = true;
+                    System.out.println("\nDownloading chapter " + chNumber);
+                    String baseUrl = row.findFirst("<a>").getAt("href");
+                    String chName = html.replaceAll("[^\\d]*[\\d]{1,3}:{0,1} (.*)", "$1").trim();
+
+                    String destPath = destFolder + "\\" + mangaName + " " + chNumber;
+                    destPath = (destPath + (!chName.isEmpty() ? " - " + chName : "")).trim();
+                    new File(destPath).mkdir();
+
+                    //Go to the page with all of the images
+                    userAgent.visit(baseUrl);
+                    Element imgContainer = null;
+                    try {
+                        imgContainer = userAgent.doc.findFirst("<div id=divImage>");
+                    } catch (Exception ex) {
+                        imgContainer = userAgent.doc.findFirst("<div class=chapter-detail>");
+                    }
+                        
+                    Elements pages = imgContainer.findEvery("<img>");
+                    int i = 0;
+                    for (Element page : pages) {
+                        String imgSrc = page.getAt("src");
+                        if (imgSrc.indexOf("googleusercontent") > 0) {  //filter out google proxy and decode url
+                            imgSrc = imgSrc.replaceAll(".*url=(.*)", "$1");
+                            imgSrc = java.net.URLDecoder.decode(imgSrc);
+                        }
+                        downloadImage(imgSrc, destPath, i);
+                        i++;
+                    }
+
+                    if (!System.getProperty("os.name").toLowerCase().contains("windows")) {
+                        destPath.replace("/", "\\");
+                    }
+
+                    //Downloads a random Poorly Drawn Lines comic for fun
+                    downloadRandomComic(destPath, i);
+
+                    //Compress into default format
+                    String cmpFile = destPath + "." + CBR;
+                    zipSuccess = zipFolder(destPath, cmpFile);
+                }
+                
+                rowIndex++;
+            }
+        } catch (Exception e) {
+            downloadSuccess = false;
+            System.out.println("Error in downloadAndZipFromKissManga");
+            System.out.println(e);
+            
+            try {
+                int input = System.in.read();
+            } catch (IOException ex) {
+                System.out.println("Error reading confimation input");
+            }
+        }
+        
+        if (!chapterDownloaded) {
+            System.out.println("No chapters to download.");
+        }
+        
+        return downloadSuccess && zipSuccess;
+    }
+    
+    private static Boolean downloadAndZipFromKissManga(String mangaName, int start, int end, HashMap<Integer, Boolean> chMap, String destFolder) {
+        Boolean downloadSuccess = true;
+        Boolean zipSuccess = true;
+        String specialChars = "[<>\"\\/\\|?*.]";
+        Boolean chapterDownloaded = false;
+        
+        Cookie ck = null;
+        try {
+            ck = new Cookie("http://www.kissmanga.com", "cf_clearance=0b9cc50c58146bd764b4469a84d4c6f5d5be8ae9-1447568434-86400");
+        } catch (Exception e) {
+            System.out.println("error");
+        }
+        
+        int rowIndex = 0;
+        String html = "";
+        try {
+            UserAgent userAgent = new UserAgent();
+            userAgent.cookies.addCookie(ck);
+            String targetURL = "https://kissmanga.com/Manga/One-Piece";
             userAgent.visit(targetURL);
             
             Elements rows = userAgent.doc.findFirst("<table class=listing>").findEvery("<tr>");
