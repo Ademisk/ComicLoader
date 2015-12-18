@@ -57,6 +57,8 @@ public class ComicLoader {
     final static String KISSMANGA_SOURCE = "http://kissmanga.com";
     final static String MY_MANGA_ONLINE_SOURCE = "http://www.mymangaonline.com";
     
+    final static String SPECIAL_FOLDER_CHARACTERS = "\\/:*?\"<>|";
+    
     //Parameters
     //args[0] - "Manga Name": "Bleach", "One Piece"
     //args[1] - Action to take. '-c' (chapter list) or '-d' (download chapters)
@@ -274,15 +276,25 @@ public class ComicLoader {
         String html = "";
         try {
             UserAgent userAgent = new UserAgent();
-            String targetURL = MY_MANGA_ONLINE_SOURCE + "/manga-info/" + mangaName.replace(" ", "-") + ".html";
+            String targetURL = MY_MANGA_ONLINE_SOURCE + "/search/?keyword=" + mangaName.replace(" ", "+");
             userAgent.visit(targetURL);
+            Elements results = userAgent.doc.findFirst("<div class=manga-info>").findEvery("<div class='box-item '>");
             
+            String mangaUrl = "";
+            for (Element result : results) {
+                if (result.findFirst("<img>").getAt("alt").trim().equals(mangaName)) {
+                    mangaUrl = result.findFirst("<span>").findFirst("<a>").getAt("href");
+                    break;
+                }
+            }
+            
+            userAgent.visit(mangaUrl);
             Elements rows = userAgent.doc.findEvery("<div class=item-chapter>");
             
             //If 'last n' download mode, get the last chapter number and calculate the chapter range
             if (Integer.MAX_VALUE == end) {
                 List<Element> rws = rows.toList();
-                int lastChNum = Integer.parseInt(rws.get(0).findFirst("<a>").innerHTML().replaceAll("[^\\d]*([\\d]{1,3}).*", "$1"));
+                int lastChNum = Integer.parseInt(rws.get(0).findFirst("<a>").innerHTML().replaceAll("([Vv]ol[. ]*[\\d]{1,3}|[^\\d])*([\\d.]{1,5}).*", "$2"));
                 
                 start = lastChNum - (end - start) + 1;
                 end = lastChNum;
@@ -292,18 +304,23 @@ public class ComicLoader {
             for (Element row : rows) {
                 html = row.findFirst("<a>").innerHTML();
                 
-                if (html.indexOf(mangaName) < 0)
-                    continue;
+                //This may not be needed since the chNumber is specifically checked. Outsider chapters shouldn't get past the check
+//                if (html.indexOf(mangaName) < 0)
+//                    continue;
+                String chNumberStr = html.replaceAll("([Vv]ol[. ]*[\\d]{1,3}|[^\\d])*([\\d.]{1,5}).*", "$2");
+                int chNumber = Integer.parseInt(chNumberStr.contains(".") ? chNumberStr.split("\\.")[0] : chNumberStr);
                 
-                int chNumber = Integer.parseInt(html.replaceAll("[^\\d]*([\\d]{1,3}).*", "$1"));
-
-                if (start <= chNumber && chNumber <= end && !chMap.containsKey(chNumber) && zipSuccess) {
+                if (chNumber < start) {
+                    break;
+                }
+                else if (start <= chNumber && chNumber <= end && !chMap.containsKey(chNumber) && zipSuccess) {
                     chapterDownloaded = true;
-                    System.out.println("\nDownloading chapter " + chNumber);
+                    System.out.println("\nDownloading chapter " + chNumberStr);
                     String baseUrl = row.findFirst("<a>").getAt("href");
-                    String chName = html.replaceAll("[^\\d]*[\\d]{1,3}:{0,1} (.*)", "$1").trim();
+                    String chName = html.replaceAll("([Vv]ol[. ]*[\\d]{1,3}|[^\\d])*([\\d.]{1,5})[ :]*(.*)", "$3")
+                            .replaceAll("[" + SPECIAL_FOLDER_CHARACTERS + "]", "").trim();
 
-                    String destPath = destFolder + "\\" + mangaName + " " + chNumber;
+                    String destPath = destFolder + "\\" + mangaName + " " + chNumberStr;
                     destPath = (destPath + (!chName.isEmpty() ? " - " + chName : "")).trim();
                     new File(destPath).mkdir();
 
