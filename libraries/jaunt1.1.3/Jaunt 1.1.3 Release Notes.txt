@@ -1,0 +1,20 @@
+Jaunt 1.1.3 Release Notes
+
+Jaunt is a free Java library that makes web scraping & automation easier.
+
+Jaunt 1.1.3 public release date: January 23, 2016
+Jaunt 1.1.3 software expiry date: February 29, 2016
+
+Installation Instructions & Quickstart Tutorial:
+http://jaunt-api.com/jaunt-tutorial.htm
+
+CHANGES FOR VERSION 1.1.3
+
+bug fix: relative urls were not correctly converted to absolute urls in Document in cases where base url included non-standard port number.
+bug fix: UserAgent.doPost method incorrectly generated an exception when specifying a header value that included ":"
+bug fix: the parser failed to recognize html5 tags as valid children for particular parent tags tags (notably p, li, td, th).
+bug fix: html5 menuitem tag was not supported in Document.saveCompleteWebPage (value of "icon" attribute was not saved locally).
+buf fix: When performing PUT and POST requests, the UserAgent failed to process the set-cookie response header.
+
+Changed in class Element:
+  getAttx(String) renamed to Element.getAtString(String)

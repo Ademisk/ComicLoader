@@ -361,7 +361,7 @@ public class ComicLoader {
             }
         } catch (Exception e) {
             downloadSuccess = false;
-            System.out.println("Error in downloadAndZipFromKissManga");
+            System.out.println("Error in downloadAndZipFromMyMangaOnline");
             System.out.println(e);
             
             try {
