@@ -1,0 +1,39 @@
+Jaunt 1.1.4 (Monthly Edition) Release Notes
+
+Release date: Feb 16, 2016
+Expiry date: Mar 31, 2016
+
+Installation Instructions & Quickstart Tutorial:
+http://jaunt-api.com/jaunt-tutorial.htm
+
+CHANGES:
+
+enhancement: method UserAgent.download(String url, File file) now accepts ftp urls.
+enhancement: method HttpResponse.getHeader(String name) now treats the name parameter as case-insensitive.
+enhancement: if flag UserAgentSettings.showHeaders is enabled, response status code is now shown as well as headers.
+enhancement: method Document.saveCompleteWebPage(String url) is more efficient and now generates a JSON manifest of downloaded items which is avaiable via UserAgent.json. 
+bugfix: Document.saveCompleteWebPage was not applying userAgentSettings to all download threads, and ResponseExceptions were being incorrectly generated when frames pointed directly to non-html/xtml content-items. 
+bugfix: base-urls that contained a querystring ending with "/" were incorrectly handled by parser when creating absolute urls.
+bugfix: UserAgent was failing to handle cookies during redirects for status code 3xx.
+bugfix: method Document.saveCompleteWebPage was in some cases generating ConcurrentModificationException
+bugfix: Cookies.saveCookies(File) was generating serialization error.
+bugfix: UserAgentSettings.autosaveAsHTML eas erroneously saving HTML files as ".xml" for POST requests.
+bugFix: UserAgentSettings.maxbytes value was being erroneously shared between UserAgent instances.
+bugFix: UserAgent.sendPOST was generating an error when posting a queryString that did not contain '='.
+
+change: serialVersionUID was added to all serializable classes.
+changes to the API as listed below:  
+
+Added/Changed in class UserAgentSettings:
+  showTravel                          //added boolean flag for displaying last visited url to console.
+  download(String, File)              //changed to return HttpResponse rather than void.
+Added/changed in class MultiMap:
+  entrySet()                          //added
+  class now implements Serializable
+Added/changed in class IOUtil: 
+  copyFolder(File, File)              //added
+  zipFolder(File, File)               //added
+  writeObj(File file, Serializable s) //parameter is now Serializable instead of Object
+  readObj(File file)                  //returns Serialiazable instead of Object 
+Removed from class Cookies:
+  loadCookies()                       //instead use loadCookies(File)
