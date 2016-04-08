@@ -1,0 +1,23 @@
+Jaunt 1.1.5 (Monthly Edition) Release Notes
+
+Release date: Mar 19, 2016
+Expiry date: Apr 30, 2016
+
+Installation Instructions & Quickstart Tutorial:
+http://jaunt-api.com/jaunt-tutorial.htm
+
+CHANGES:
+
+enhancement: added UserAgent.copy(), which creates a new UserAgent with a deep-copy of certain properites (cookies, settings); the doc and json properties are not copied and are set to null.
+enhancement: improved formatting for UserAgent.sendPOST when UserAgent.showHeaders = true;
+bugfix: Document.saveCompleteWebPage method was generating a JSON manifest where not all fields were correctly populated after a ResponseException.
+bugfix: Default document model was disallowing block children for the <dt> tag.
+changes to the API as listed below:
+
+Added in class Form: 
+  getRequest(int submitButtonIndex)
+Changed in class Cookie:
+  getNameValuePair()             //removed
+  copy()                         //added
+Added in class UserAgent:  
+  copy()
