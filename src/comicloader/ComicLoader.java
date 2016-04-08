@@ -27,6 +27,7 @@ import java.util.concurrent.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.time.StopWatch;
+import org.apache.commons.validator.routines.UrlValidator;
 
 public class ComicLoader {
     //Commands
@@ -192,33 +193,47 @@ public class ComicLoader {
     }
     
     private static void downloadImage(String src, String destFolder, Integer index) {
-        Boolean finishDownload = false;
-        int counter = 0;
+        //Validate url
+        UrlValidator urlValidator = new UrlValidator();
+        if (!urlValidator.isValid(src)) {
+            return;
+        }
         
-        while (!finishDownload) {
-            try {
-                URL website = new URL(src);
-                Path dest = Paths.get(destFolder + "\\" + index + ".jpg");
-                Files.copy(website.openStream(), dest, StandardCopyOption.REPLACE_EXISTING);
-                finishDownload = true;
-            } catch (ConnectException ce) {                
-                System.out.println("\nConnectException error in downloadImage. Continuing download...");
-                System.out.println(ce.toString());
-                counter++;
-                
-                if (10 == counter)
-                    finishDownload = true;
-            } catch (Exception e) {
-                finishDownload = true;
-                
-                System.out.println("Error in downloadImage");
-                System.out.println(e.toString());
+        //Ping the url to test existence of file
+        HttpURLConnection connection = null;
+        try{         
+            URL myurl = new URL(src);
+            connection = (HttpURLConnection) myurl.openConnection(); 
+            //Set request to header to reduce load as Subirkumarsao said.       
+            connection.setRequestMethod("HEAD");         
+            int code = connection.getResponseCode();        
+            //System.out.println("" + code); 
+        } catch (Exception e) {
+            //No file at url, log and return
+            System.out.println("Page " + index + ": " + src + " can't be reached. Skipping");
+            return;
+        }
+        
+        try {
+            URL website = new URL(src);
+            Path dest = Paths.get(destFolder + "\\" + index + ".jpg");
+            website.openStream();
+            Files.copy(website.openStream(), dest, StandardCopyOption.REPLACE_EXISTING);
+        } catch (java.io.FileNotFoundException e) {
+            System.out.println("File not Found, likely because it's a false file. Continuing download...");
+            System.out.println(e.toString());
+        } catch (ConnectException ce) {                
+            System.out.println("\nConnectException error in downloadImage. Continuing download...");
+            System.out.println(ce.toString());
+        } catch (Exception e) {
 
-                try {
-                    int input = System.in.read();
-                } catch (IOException ex) {
-                    System.out.println("Error reading confimation input");
-                }
+            System.out.println("Error in downloadImage");
+            System.out.println(e.toString());
+
+            try {
+                int input = System.in.read();
+            } catch (IOException ex) {
+                System.out.println("Error reading confimation input");
             }
         }
     }
