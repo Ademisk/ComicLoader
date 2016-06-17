@@ -47,7 +47,7 @@ public class ComicLoader {
     final static String KISS_MANGA = "Kiss Manga";      //Blocks mini browsers, validates by cookie (can't spoof)
     final static String MANGA_PANDA = "Manga Panda";
     final static String MANGA_TOWN = "Manga Town";      //For some reason dead
-    final static String MY_MANGA_ONLINE = "My Manga Online";
+    final static String MY_MANGA_ONLINE = "Manga Online";
     
     static String targetLocalFolder;
     static String targetDropboxFolder;
@@ -56,7 +56,7 @@ public class ComicLoader {
     final static String MANGATOWN_SOURCE = "temp";
     final static String MANGAPANDA_SOURCE = "http://www.mangapanda.com";
     final static String KISSMANGA_SOURCE = "http://kissmanga.com";
-    final static String MY_MANGA_ONLINE_SOURCE = "http://www.mymangaonline.com";
+    final static String MANGA_ONLINE_SOURCE = "http://mangaonline.to";
     
     final static String SPECIAL_FOLDER_CHARACTERS = "\\/:*?\"<>|";
     
@@ -64,7 +64,7 @@ public class ComicLoader {
     //args[0] - "Manga Name": "Bleach", "One Piece"
     //args[1] - Action to take. '-c' (chapter list) or '-d' (download chapters)
     //args[2] - Chapter numbers. Specific: '59', Range: '1-100', Last n: '-n'
-    //args[3] - "Source Site": "KISSMANGA", "MANGAPANDA", "MY MANGA ONLINE"
+    //args[3] - "Source Site": "KISSMANGA", "MANGAPANDA", "MANGA ONLINE"
     public static void main(String[] args) {        
         mainController(args);
     }
@@ -169,7 +169,7 @@ public class ComicLoader {
         Boolean isSuccess = false;
         System.out.println("Beginning chapter download from " + source + "...");
         if (MY_MANGA_ONLINE.toLowerCase().equals(source.toLowerCase())) {
-            isSuccess = downloadAndZipFromMyMangaOnline(mangaName, start, end, chMap, dest);
+            isSuccess = downloadAndZipFromMangaOnline(mangaName, start, end, chMap, dest);
         } else if (KISS_MANGA.toLowerCase().equals(source.toLowerCase())) {
             isSuccess = downloadAndZipFromKissManga(mangaName, start, end, chMap, dest);
         } else if (MANGA_PANDA.toLowerCase().equals(source.toLowerCase())) {
@@ -281,7 +281,7 @@ public class ComicLoader {
         return moveSuccess;
     }
     
-    private static Boolean downloadAndZipFromMyMangaOnline(String mangaName, int start, int end, HashMap<Integer, Boolean> chMap, String destFolder) {
+    private static Boolean downloadAndZipFromMangaOnline(String mangaName, int start, int end, HashMap<Integer, Boolean> chMap, String destFolder) {
         Boolean downloadSuccess = true;
         Boolean zipSuccess = true;
         String specialChars = "[<>\"\\/\\|?*.]";
@@ -291,25 +291,26 @@ public class ComicLoader {
         String html = "";
         try {
             UserAgent userAgent = new UserAgent();
-            String targetURL = MY_MANGA_ONLINE_SOURCE + "/search/?keyword=" + mangaName.replace(" ", "+");
+            String targetURL = MANGA_ONLINE_SOURCE + "/search.html?key=" + mangaName.replace(" ", "+");
             userAgent.visit(targetURL);
-            Elements results = userAgent.doc.findFirst("<div class=manga-info>").findEvery("<div class='box-item '>");
+            Elements results = userAgent.doc.findFirst("<div class=popular-body>").findEvery("<li>");
             
             String mangaUrl = "";
             for (Element result : results) {
-                if (result.findFirst("<img>").getAt("alt").trim().equals(mangaName)) {
-                    mangaUrl = result.findFirst("<span>").findFirst("<a>").getAt("href");
+                if (result.findFirst("<a>").findFirst("<img>").getAt("alt").trim().equals(mangaName)) {
+                    mangaUrl = result.findFirst("<a>").getAt("href");
                     break;
                 }
             }
             
             userAgent.visit(mangaUrl);
-            Elements rows = userAgent.doc.findEvery("<div class=item-chapter>");
+            Elements rows = userAgent.doc.findEvery("<div class=list-chapter>").findEvery("<li>");
             
             //If 'last n' download mode, get the last chapter number and calculate the chapter range
             if (Integer.MAX_VALUE == end) {
                 List<Element> rws = rows.toList();
-                int lastChNum = Integer.parseInt(rws.get(0).findFirst("<a>").innerHTML().replaceAll("([Vv]ol[. ]*[\\d]{1,3}|[^\\d])*([\\d.]{1,5}).*", "$2"));
+                String lastChNumStr = rws.get(0).findFirst("<a>").innerHTML().replaceAll("<span>.*</span>", "");
+                int lastChNum = Integer.parseInt(lastChNumStr.replaceAll("([Vv]ol[. ]*[\\d]{1,3}|[^\\d])*([\\d.]{1,5}).*\\s*", "$2"));
                 
                 start = lastChNum - (end - start) + 1;
                 end = lastChNum;
@@ -322,6 +323,7 @@ public class ComicLoader {
                 //This may not be needed since the chNumber is specifically checked. Outsider chapters shouldn't get past the check
 //                if (html.indexOf(mangaName) < 0)
 //                    continue;
+                html = html.replaceAll("<span>.*</span>", "").trim();
                 String chNumberStr = html.replaceAll("([Vv]ol[. ]*[\\d]{1,3}|[^\\d])*([\\d.]{1,5}).*", "$2");
                 int chNumber = Integer.parseInt(chNumberStr.contains(".") ? chNumberStr.split("\\.")[0] : chNumberStr);
                 
@@ -342,11 +344,7 @@ public class ComicLoader {
                     //Go to the page with all of the images
                     userAgent.visit(baseUrl);
                     Element imgContainer = null;
-                    try {
-                        imgContainer = userAgent.doc.findFirst("<div id=divImage>");
-                    } catch (Exception ex) {
-                        imgContainer = userAgent.doc.findFirst("<div class=chapter-detail>");
-                    }
+                    imgContainer = userAgent.doc.findFirst("<div class=list-img>");
                         
                     Elements pages = imgContainer.findEvery("<img>");
                     int i = 0;
