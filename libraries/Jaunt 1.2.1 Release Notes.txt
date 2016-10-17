@@ -1,0 +1,14 @@
+Jaunt 1.2.1 (Monthly Edition) Release Notes
+
+Release date: Sep 17, 2016
+Expiry date: Oct 31, 2016
+
+Installation Instructions & Quickstart Tutorial:
+http://jaunt-api.com/jaunt-tutorial.htm
+
+CHANGES:
+
+bugfix: statusCode and contentType fields are now correctly populated in the JSON manifest file that is automatically created when calling the method Document.saveCompleteWebPage(File file).
+
+No changes to the public library.
+

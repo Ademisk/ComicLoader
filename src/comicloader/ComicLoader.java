@@ -291,7 +291,7 @@ public class ComicLoader {
         String html = "";
         try {
             UserAgent userAgent = new UserAgent();
-            String targetURL = MANGA_ONLINE_SOURCE + "/search.html?key=" + mangaName.replace(" ", "+");
+            String targetURL = MANGA_ONLINE_SOURCE + "/search.html?keyword=" + mangaName.replace(" ", "+");
             userAgent.visit(targetURL);
             Elements results = userAgent.doc.findFirst("<div class=popular-body>").findEvery("<li>");
             
