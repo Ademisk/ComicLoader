@@ -1,0 +1,12 @@
+Jaunt 1.2.2 (Monthly Edition) Release Notes
+
+Release date: Oct 15, 2016
+Expiry date: Nov 30, 2016
+
+Installation Instructions & Quickstart Tutorial:
+http://jaunt-api.com/jaunt-tutorial.htm
+
+CHANGES:
+
+No changes to the public library.
+
