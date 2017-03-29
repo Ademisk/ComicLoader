@@ -192,17 +192,23 @@ public class ComicLoader {
         return 200;
     }
     
+    private static String sanitizeUrl(String url) {
+        String cleanUrl = url.replaceAll("this.src='([^']*)'", "$1");
+        return cleanUrl;
+    }
+    
     private static void downloadImage(String src, String destFolder, Integer index) {
         //Validate url
+        String cleanUrl = sanitizeUrl(src);
         UrlValidator urlValidator = new UrlValidator();
-        if (!urlValidator.isValid(src)) {
+        if (!urlValidator.isValid(cleanUrl)) {
             return;
         }
         
         //Ping the url to test existence of file
         HttpURLConnection connection = null;
-        try{         
-            URL myurl = new URL(src);
+        try{            
+            URL myurl = new URL(cleanUrl);
             connection = (HttpURLConnection) myurl.openConnection(); 
             //Set request to header to reduce load as Subirkumarsao said.       
             connection.setRequestMethod("HEAD");         
@@ -210,21 +216,18 @@ public class ComicLoader {
             //System.out.println("" + code); 
         } catch (Exception e) {
             //No file at url, log and return
-            System.out.println("Page " + index + ": " + src + " can't be reached. Skipping");
+            System.out.println("Page " + index + ": " + cleanUrl + " can't be reached. Skipping");
             return;
         }
         
         try {
-            URL website = new URL(src);
-            Path dest = Paths.get(destFolder + "\\" + index + ".jpg");
-            website.openStream();
-            Files.copy(website.openStream(), dest, StandardCopyOption.REPLACE_EXISTING);
-        } catch (java.io.FileNotFoundException e) {
-            System.out.println("File not Found, likely because it's a false file. Continuing download...");
-            System.out.println(e.toString());
-        } catch (ConnectException ce) {                
-            System.out.println("\nConnectException error in downloadImage. Continuing download...");
-            System.out.println(ce.toString());
+            //URL website = new URL(cleanUrl);
+            //Path dest = Paths.get(destFolder + "\\" + index + ".jpg");
+            String dest = destFolder + "\\" + index + ".jpg";
+            File file = new File(dest);
+            
+            UserAgent userAgent = new UserAgent();
+            userAgent.download(cleanUrl, file);
         } catch (Exception e) {
 
             System.out.println("Error in downloadImage");
@@ -349,7 +352,11 @@ public class ComicLoader {
                     Elements pages = imgContainer.findEvery("<img>");
                     int i = 0;
                     for (Element page : pages) {
-                        String imgSrc = page.getAt("src");
+                        String imgSrc = "";
+                        if (page.hasAttribute("onerror"))
+                            imgSrc = page.getAt("onerror");
+                        else
+                            imgSrc = page.getAt("src");
                         if (imgSrc.indexOf("googleusercontent") > 0) {  //filter out google proxy and decode url
                             imgSrc = imgSrc.replaceAll(".*url=(.*)", "$1");
                             imgSrc = java.net.URLDecoder.decode(imgSrc);

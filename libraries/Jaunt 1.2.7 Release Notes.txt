@@ -1,0 +1,15 @@
+Jaunt 1.2.7 (Monthly Edition) Release Notes
+
+Release date: Feb 18, 2017
+Expiry date: Mar 31, 2017
+
+Installation Instructions & Quickstart Tutorial:
+http://jaunt-api.com/jaunt-tutorial.htm
+
+CHANGES:
+
+change: Cookie 'expires' field now ignored. 
+bugfix: HTTP 302 and 307 response code (redirect) would switch POST a request to a GET request and result in a loss of custom headers and postData.
+bugfix: Enabling showHeaders flag in UserAgentSettings would report a false error message regarding multiple location headers.
+
+
