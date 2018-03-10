@@ -5,12 +5,9 @@ import com.jaunt.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.io.File;
-import java.io.InputStream;
 import java.io.IOException;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,8 +18,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import javax.imageio.*;
-import java.util.concurrent.*;
         
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -31,9 +26,11 @@ import org.apache.commons.validator.routines.UrlValidator;
 
 public class ComicLoader {
     //Commands
-    final static String CHAPTER_LIST_CHAPTERS = "-c";
-    final static String CHAPTER_DOWNLOAD = "-d";
-    final static String HELP = "-h";
+    final static String DO_LIST_CHAPTERS = "-c";
+    final static String DO_CHAPTER_DOWNLOAD_SPECIFIC = "-Specific";
+    final static String DO_CHAPTER_DOWNLOAD_RANGE = "-Range";
+    final static String DO_CHAPTER_DOWNLOAD_LAST = "-Last";
+    final static String DO_HELP = "-h";
     
     //Default Storage
     final static String DEFAULT_FOLDER = "C:\\Users\\" + System.getProperty("user.name") + "\\Documents\\Manga\\";
@@ -44,26 +41,30 @@ public class ComicLoader {
     final static String CBR = "cbr";
     
     //Manga Providers
-    final static String KISS_MANGA = "Kiss Manga";      //Blocks mini browsers, validates by cookie (can't spoof)
-    final static String MANGA_PANDA = "Manga Panda";
-    final static String MANGA_TOWN = "Manga Town";      //For some reason dead
-    final static String MY_MANGA_ONLINE = "Manga Online";
-    
-    static String targetLocalFolder;
-    static String targetDropboxFolder;
+    final static String KISS_MANGA = "kiss manga";          //Blocks mini browsers, validates by cookie (can't spoof)
+    final static String MANGA_PANDA = "manga panda";
+    final static String MANGA_TOWN = "manga town";          //For some reason dead
+    final static String MY_MANGA_ONLINE = "manga online";   //Gone
+    final static String MANGANELO = "manganelo";
     
     //Source sites
     final static String MANGATOWN_SOURCE = "temp";
     final static String MANGAPANDA_SOURCE = "http://www.mangapanda.com";
     final static String KISSMANGA_SOURCE = "http://kissmanga.com";
     final static String MANGA_ONLINE_SOURCE = "http://mangaonline.to";
+    final static String MANGA_READER_SOURCE = "http://www.mangareader.net";
+    final static String MANGANELO_SOURCE = "http://manganelo.com";
+    //final static String MANGA_SOURCE = MANGANELO_SOURCE;
     
     final static String SPECIAL_FOLDER_CHARACTERS = "\\/:*?\"<>|";
     
+    static String targetLocalFolder;
+    static String targetDropboxFolder;
+    
     //Parameters
     //args[0] - "Manga Name": "Bleach", "One Piece"
-    //args[1] - Action to take. '-c' (chapter list) or '-d' (download chapters)
-    //args[2] - Chapter numbers. Specific: '59', Range: '1-100', Last n: '-n'
+    //args[1] - Action to take. '-c' (chapter list) or '-[command]' (download chapters)
+    //args[2] - Chapter numbers. Specific: '-specific n', Range: '-range 1-100', Last n: '-last n'
     //args[3] - "Source Site": "KISSMANGA", "MANGAPANDA", "MANGA ONLINE"
     public static void main(String[] args) {        
         mainController(args);
@@ -98,12 +99,12 @@ public class ComicLoader {
         
         String source = args[3];
         
-        if (3 <= args.length && CHAPTER_LIST_CHAPTERS.equals(args[1])) {
+        if (3 <= args.length && DO_LIST_CHAPTERS.equals(args[1])) {
             //List the latest n chapters
             if (args[2].matches("-\\d+")) {
                 fetchChapterList(Integer.parseInt(args[2]));
             }
-        } else if (3 <= args.length && CHAPTER_DOWNLOAD.equals(args[1])) {
+        } else if (3 <= args.length) { //&& DO_CHAPTER_DOWNLOAD.equals(args[1])) {
             //Download the chapters specified
             String mangaName = args[0];
             String targetLocalFolder;
@@ -125,13 +126,13 @@ public class ComicLoader {
             int start = 1;
             int end = 1;
 
-            if (args[2].matches("-\\d+")) {
+            if (DO_CHAPTER_DOWNLOAD_LAST.equals(args[1])) {                 //Get latest n chapters
                 start = Integer.MAX_VALUE - Integer.parseInt(args[2].replaceAll("-", ""));
                 end = Integer.MAX_VALUE;
-            } else if (args[2].matches("\\d+-\\d+")) {
+            } else if (DO_CHAPTER_DOWNLOAD_RANGE.equals(args[1])) {      //Get capters n to m
                 start = Integer.parseInt(args[2].replaceAll("-\\d+", ""));
                 end = Integer.parseInt(args[2].replaceAll("\\d+-", ""));
-            } else if (args[2].matches("\\d+")) {
+            } else if (DO_CHAPTER_DOWNLOAD_SPECIFIC.equals(args[1])) {           //Get specific chapter
                 start = Integer.parseInt(args[2]);
                 end = Integer.parseInt(args[2]);
             }
@@ -144,11 +145,11 @@ public class ComicLoader {
             //Only moves the downloaded chapters because they had .cbr files created
             if (downloadSuccess)
                 moveSuccess = moveToDropbox(CBR, targetLocalFolder, targetDropboxFolder);
-        } else if (HELP.equals(args[1])) {;
-          System.out.println("Download a range of chapters: java -jar 'path/to/file.jar 'manga name' -d startChapterNum-endChapterNum 'manga source'");
-          System.out.println("Download the latest x chapters: java -jar 'path/to/file.jar 'manga name' -d -xChapters 'manga source'");
-          System.out.println("Download a specific chapter: java -jar 'path/to/file.jar 'manga name' -d chapterNum 'manga source'");
-          System.out.println("Ex: \"java -jar path/to/file.js \"One Piece\" -d -20 \"kiss manga\"");
+        } else if (DO_HELP.equals(args[1])) {;
+            System.out.println("Download a range of chapters: java -jar 'path/to/file.jar 'manga name' -d startChapterNum-endChapterNum 'manga source'");
+            System.out.println("Download the latest x chapters: java -jar 'path/to/file.jar 'manga name' -d -xChapters 'manga source'");
+            System.out.println("Download a specific chapter: java -jar 'path/to/file.jar 'manga name' -d chapterNum 'manga source'");
+            System.out.println("Ex: \"java -jar path/to/file.js \"One Piece\" -d -20 \"kiss manga\"");
         } else {
             System.out.println("Incorrect Arguments");
         }
@@ -165,18 +166,39 @@ public class ComicLoader {
         System.out.println("To Do: Implement chapter list");
     }
     
+    //TO DO:
+    //- Optimize here to pass a hashmap of paths to the download function, instead of having a function per site
+    //- Split up download and zip
     public static Boolean downloadChapters(String mangaName, int start, int end, HashMap<Integer, Boolean> chMap, String source, String dest) {
         Boolean isSuccess = false;
         System.out.println("Beginning chapter download from " + source + "...");
-        if (MY_MANGA_ONLINE.toLowerCase().equals(source.toLowerCase())) {
-            isSuccess = downloadAndZipFromMangaOnline(mangaName, start, end, chMap, dest);
-        } else if (KISS_MANGA.toLowerCase().equals(source.toLowerCase())) {
-            isSuccess = downloadAndZipFromKissManga(mangaName, start, end, chMap, dest);
-        } else if (MANGA_PANDA.toLowerCase().equals(source.toLowerCase())) {
-            isSuccess = downloadAndZipFromMangaPanda(mangaName, start, end, chMap, dest);
-//        } else if (MANGA_TOWN.toLowerCase().equals(source.toLowerCase())) {
-//            isSuccess = downloadAndZipFromMangaTown(start, end, chMap, dest);
+        switch (source.toLowerCase()) {
+            case KISS_MANGA:
+                isSuccess = downloadAndZipFromKissManga(mangaName, start, end, chMap, dest);
+                break;
+            case MY_MANGA_ONLINE: 
+                isSuccess = downloadAndZipFromMangaOnline(mangaName, start, end, chMap, dest);
+                break;
+            case MANGA_PANDA:
+                isSuccess = downloadAndZipFromMangaPanda(mangaName, start, end, chMap, dest);
+                break;
+            case MANGA_TOWN:
+                break;
+            case MANGANELO:
+                isSuccess = downloadAndZipFromManganelo(mangaName, start, end, chMap, dest);
+                break;    
         }
+        
+        
+//        if (MY_MANGA_ONLINE.toLowerCase().equals(source.toLowerCase())) {
+//            isSuccess = downloadAndZipFromMangaOnline(mangaName, start, end, chMap, dest);
+//        } else if (KISS_MANGA.toLowerCase().equals(source.toLowerCase())) {
+//            isSuccess = downloadAndZipFromKissManga(mangaName, start, end, chMap, dest);
+//        } else if (MANGA_PANDA.toLowerCase().equals(source.toLowerCase())) {
+//            isSuccess = downloadAndZipFromMangaPanda(mangaName, start, end, chMap, dest);
+////        } else if (MANGA_TOWN.toLowerCase().equals(source.toLowerCase())) {
+////            isSuccess = downloadAndZipFromMangaTown(start, end, chMap, dest);
+//        }
         
         return isSuccess;
     }
@@ -577,6 +599,94 @@ public class ComicLoader {
         } catch (Exception e) {
             downloadSuccess = false;
             System.out.println("Error in downloadAndZipFromMangaPanda");
+            System.out.println(e);
+            
+            try {
+                int input = System.in.read();
+            } catch (IOException ex) {
+                System.out.println("Error reading confimation input");
+            }
+        }
+        
+        return downloadSuccess && zipSuccess;
+    }
+    
+    private static Boolean downloadAndZipFromManganelo(String mangaName, int start, int end, HashMap<Integer, Boolean> chMap, String destFolder) {
+        Boolean downloadSuccess = true;
+        Boolean zipSuccess = true;
+        String specialChars = "[<>\"\\/\\|?*.]";
+        
+        int lChNum = 0;
+        try {
+            //1) Go to the search page
+            UserAgent userAgent = new UserAgent();
+            String targetURL = MANGANELO_SOURCE + "/search/" + mangaName.replaceAll("\\s", "_");
+            userAgent.visit(targetURL);
+            
+            //2) Filter out target manga link and go to it
+            String targetMangaUrl = userAgent.doc.findFirst("<div class=daily-update").findFirst("<a>").getAt("href");
+            userAgent.visit(targetMangaUrl);
+            
+            //3) Figure out the chapters needed, and iterate through each to download
+            Elements rows = userAgent.doc.findFirst("<div class=manga-info-chapter").findEvery("<a>");
+            
+            //If in 'last n' download mode, get the last chapter number and calculate the range
+            if (Integer.MAX_VALUE == end) {
+                int chCount = rows.size();
+                List<Element> rws = rows.toList();
+                int lastChNum = Integer.parseInt(rws.get(0).innerHTML().replaceAll("Vol.[0-9].+ ", "").replaceAll("[Cc]hapter ([0-9]+).*", "$1").trim());
+                //lastChNum = Integer.parseInt(rws.get(chCount - 1).findFirst("<td>").innerHTML().replaceAll("\\s.+\\s.+" + mangaName + " ([0-9]+)</a>.+", "$1").trim());
+                
+                start = lastChNum - (end - start) + 1;
+                end = lastChNum;
+            }
+            
+            for (Element row : rows) {
+                //3.1) Chapter number
+                String num = row.innerHTML().replaceAll("Vol.[0-9]+ ", "").replaceAll("[Cc]hapter ([0-9]+).*", "$1").trim();
+//                if (num == "Incident")
+//                    System.out.print("hi");
+                int chNumber = Integer.parseInt(num);
+//                if (chNumber == 503)
+//                    System.out.print("hi");
+                
+//                if (chNumber < start || chNumber > end)
+//                    break;
+                
+                if (chNumber >= start && chNumber <= end && !chMap.containsKey(chNumber) && zipSuccess) {
+                    System.out.println("\nDownloading chapter " + chNumber);
+                    
+//                    //3.2) Chapter name
+//                    String chName = row.innerHTML().replaceAll("Vol.[0-9].+ ", "").replaceAll("[Cc]hapter " + chNumber, "").replaceAll(" : ", "").trim();
+                    
+                    //3.3) Chapter url
+                    String baseUrl = row.getAt("href");
+                    
+
+                    String destPath = destFolder + "\\" + mangaName + " " + chNumber;
+                    new File(destPath).mkdir();
+
+                    userAgent.visit(baseUrl);
+
+                    //Find all Pages, and loop through to download each one
+                    Elements pages = userAgent.doc.findFirst("<div id=vungdoc>").findEvery("<img>");
+                    int pageIndex = 0;
+                    for (Element page : pages) {
+                        System.out.print(".");
+                        pageIndex++;
+                        String imgSrc = page.getAt("src");
+                        downloadImage(imgSrc, destPath, pageIndex);
+                    }
+
+                    //Compress into default format
+                    String cmpFile = destPath + "." + CBR;
+                    zipSuccess = zipFolder(destPath, cmpFile);
+                }
+                lChNum = chNumber;
+            }
+        } catch (Exception e) {
+            downloadSuccess = false;
+            System.out.println("Error in downloadAndZipFromMangaPanda, chapter " + lChNum);
             System.out.println(e);
             
             try {
