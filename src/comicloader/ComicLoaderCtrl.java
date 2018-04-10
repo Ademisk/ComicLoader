@@ -114,22 +114,11 @@ public class ComicLoaderCtrl {
     
     public Boolean downloadChapters(String mangaName, int start, int end, HashMap<Integer, Boolean> chMap, String source, String dest) {
         Boolean isSuccess = false;
-        System.out.println("Beginning chapter download from " + source + "...");
+        System.out.println("Beginning [" + mangaName + "] chapter download from " + source + "...");
         switch (source.toLowerCase()) {
             case MANGANELO:
                 isSuccess = downloadAndZipFromManganelo(mangaName, start, end, chMap, dest);
-                break;    
-//            case KISS_MANGA:
-//                isSuccess = downloadAndZipFromKissManga(mangaName, start, end, chMap, dest);
-//                break;
-//            case MY_MANGA_ONLINE: 
-//                isSuccess = downloadAndZipFromMangaOnline(mangaName, start, end, chMap, dest);
-//                break;
-//            case MANGA_PANDA:
-//                isSuccess = downloadAndZipFromMangaPanda(mangaName, start, end, chMap, dest);
-//                break;
-//            case MANGA_TOWN:
-//                break;
+                break;
         }
         
         return isSuccess;
@@ -156,7 +145,9 @@ public class ComicLoaderCtrl {
             //If in 'last n' download mode, get the last chapter number and calculate the range
             if (Integer.MAX_VALUE == end) {
                 List<Element> rws = chapters.toList();
-                int lastChNum = Integer.parseInt(rws.get(0).innerHTML().replaceAll("Vol.[0-9].+ ", "").replaceAll("[Cc]hapter ([0-9]+).*", "$1").trim());
+                String inHtml = rws.get(0).innerHTML();
+                String chStr = inHtml.replaceAll("Vol.[0-9]+ ", "").replaceAll("[Cc]hapter ([0-9]+).*", "$1").trim();
+                int lastChNum = Integer.parseInt(chStr);
                 
                 start = lastChNum - (end - start) + 1;
                 end = lastChNum;
@@ -168,11 +159,13 @@ public class ComicLoaderCtrl {
                 String chNumStr = chapter.innerHTML().replaceAll("Vol.[0-9]+ ", "").replaceAll("[Cc]hapter ([0-9]+).*", "$1").trim();
                 int chNumber = Integer.parseInt(chNumStr);
                 
-                if (chNumber >= start && chNumber <= end && !chMap.containsKey(chNumber) && zipSuccess) {
+                if (chNumber < start)
+                    break;
+                else if (chNumber >= start && chNumber <= end && !chMap.containsKey(chNumber) && zipSuccess) {
                     System.out.println("\nDownloading chapter " + chNumber);
                     
-//                    //3.2) Chapter name
-//                    String chName = row.innerHTML().replaceAll("Vol.[0-9].+ ", "").replaceAll("[Cc]hapter " + chNumber, "").replaceAll(" : ", "").trim();
+                    //3.2) Chapter name
+                    //String chName = row.innerHTML().replaceAll("Vol.[0-9].+ ", "").replaceAll("[Cc]hapter " + chNumber, "").replaceAll(" : ", "").trim();
                     
                     //3.3) Chapter url
                     String chUrl = chapter.getAt("href");
