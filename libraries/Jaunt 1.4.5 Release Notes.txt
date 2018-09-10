@@ -1,0 +1,13 @@
+Jaunt 1.4.5 (Monthly Edition) Release Notes
+
+Release date: Aug 17, 2018
+Expiry date: Sep 30, 2018
+
+Installation Instructions & Quickstart Tutorial:
+http://jaunt-api.com/jaunt-tutorial.htm
+
+CHANGES:
+
+Changes to class UserAgent: The constructor for class UserAgent now throws ExpirationException, which is an unchecked Exception that indicated that Jaunt has expired.
+Changes to class Cookie: the constructor for class Cookie now throws a JauntException rather than an Exception.
+New class: com.jaunt.ExpirationException.

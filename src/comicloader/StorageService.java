@@ -14,39 +14,40 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.apache.commons.io.FileUtils;
 
+import com.dropbox.core.DbxRequestConfig;
+import com.dropbox.core.v2.DbxClientV2;
+import com.dropbox.core.v2.files.FileMetadata;
+import com.dropbox.core.v2.users.FullAccount;
+import com.dropbox.core.v2.files.ListFolderResult;
+import com.dropbox.core.v2.files.Metadata;
+import java.io.InputStream;
+
 /**
  *
  * @author Max
  */
 public class StorageService {
-    public static Boolean moveToDropbox(String fileType, String localFolder, String dropboxFolder) {
+    final static String MAX_DROPBOX_API_KEY = "iappzlcay263tks";
+    //final static String MAX_ACCESS_TOKEN = "vdW-CNED7A8AAAAAAABk-3cCn75BLQNnKwMmOnx6paolfgcpIgQftATJzogetp-L";
+    //final static String CAITLIN_ACCESS_TOKEN = "PHuBlNxvi2cAAAAAAAAIe_Wgdwnl0qdpcqXOlPFQg9OR794k432tijqIId-Vi-t7";
+    
+    public static Boolean moveToDropbox(String fileType, String localFolder, String mangaName, String dropboxApiKey) {        
         Boolean moveSuccess = true;
         String []extensions = {fileType};
-        //Find all files in default folder and move to dropbox
+        //Find all files in default folder and upload to dropbox
         List<File> files = (List<File>)FileUtils.listFiles(new File(localFolder), extensions, true);
         
-        //Create Manga folder if does not exist
-        try {
-            if (!Files.exists(Paths.get(dropboxFolder)))
-                Files.createDirectories(Paths.get(dropboxFolder));
-        } catch (IOException e) {
-            System.out.println("Couldn't generate new manga folder: " + e.toString());
-            
-            try {
-                int input = System.in.read();
-            } catch (IOException ex) {
-                System.out.println("Error reading confimation input");
-            }
-        }
-       
+        DbxRequestConfig config = new DbxRequestConfig("mangaloader/1.0");
+        DbxClientV2 client = new DbxClientV2(config, dropboxApiKey);
         for (File file : files) {
-            try {
-                String []fileParts = file.toString().split("\\\\");
-                String chName = fileParts[fileParts.length - 1];
-                Path fp = file.toPath();
-                Path fpdb = new File(dropboxFolder + "\\" + chName).toPath();
-                Files.move(fp, fpdb, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
+            String []fileParts = file.toString().split("\\\\");
+            String chName = fileParts[fileParts.length - 1];
+            String path = file.toPath().toString();
+            try (InputStream in = new FileInputStream(path)) {
+                FileMetadata metadata = client.files().uploadBuilder("/Manga/" + mangaName + "/" + chName)
+                    .uploadAndFinish(in);
+            }
+            catch (Exception e) {
                 moveSuccess = false;
                 System.out.println("Error in moveToDropbox");
                 System.out.println(e.toString());

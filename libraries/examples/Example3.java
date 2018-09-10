@@ -11,10 +11,10 @@ public class Example3{
       Element body = userAgent.doc.findFirst("<body>");
       Element div = body.findFirst("<div>");
    
-      System.out.println("body's text: " + body.getText());         //join child text of body element
+      System.out.println("body's child text: " + body.getChildText());//join child text of body element
       System.out.println("body's innerText: " + body.innerText()); //join all text within body element
-      System.out.println("div's text: " + div.getText());           //join child of div element
-      System.out.println("div's innerText: " + div.innerText());    //join all text within the div element 
+      System.out.println("div's child text: " + div.getChildText());//join child of div element
+      System.out.println("div's innerText: " + div.innerText());   //join all text within the div element 
     }
     catch(JauntException e){
       System.err.println(e);

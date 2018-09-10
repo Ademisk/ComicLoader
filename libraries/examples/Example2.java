@@ -10,11 +10,11 @@ public class Example2{
       userAgent.settings.autoSaveAsHTML = true;                    //change settings to autosave last visited page. 
       
       userAgent.visit("http://oracle.com");                        //visit a url.
-      String title = userAgent.doc.findFirst("<title>").getText(); //get child text of title element.
+      String title = userAgent.doc.findFirst("<title>").getChildText(); //get child text of title element.
       System.out.println("\nOracle's website title: " + title);    //print the title
 
       userAgent.visit("http://amazon.com");                        //visit another url.
-      title = userAgent.doc.findFirst("<title>").getText();        //get child text of first title element.
+      title = userAgent.doc.findFirst("<title>").getChildText();   //get child text of first title element.
       System.out.println("\nAmazon's website title: " + title);    //print the title
     }
     catch(JauntException e){   //if title element isn't found or HTTP/connection error occurs, handle JauntException.

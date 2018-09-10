@@ -54,6 +54,7 @@ public class ComicLoaderCtrl {
         Boolean doListChapters = argMan.canDoListChapters();
         Boolean doHelp = argMan.canDoHelp();
         String chStr = argMan.getChapters();
+        String dropboxApiKey = argMan.getApiKey();
         
         if (doListChapters && chStr.matches("-\\d+")) {
             //List the latest n chapters
@@ -105,8 +106,12 @@ public class ComicLoaderCtrl {
 
             //Move to dropbox if successfully downloaded
             //Only moves the downloaded chapters because they had .cbr files created
-            if (downloadSuccess)
-                moveSuccess = StorageService.moveToDropbox(CBR, targetLocalFolder, targetDropboxFolder);
+            if (downloadSuccess) {
+                moveSuccess = StorageService.moveToDropbox(CBR, targetLocalFolder, mangaName, dropboxApiKey);
+                
+                if (moveSuccess)
+                    System.out.println("==== Successfully Uploaded to Dropbox ====");
+            }
         } else {
             System.out.println("Incorrect Arguments");
         }
@@ -127,6 +132,7 @@ public class ComicLoaderCtrl {
     private Boolean downloadAndZipFromManganelo(String mangaName, int start, int end, HashMap<Integer, Boolean> chMap, String destFolder) {
         Boolean downloadSuccess = true;
         Boolean zipSuccess = true;
+        String chNumberRegex = ".*([Cc]hapter|[Cc]h) (\\d+).*";
         
         int lChNum = 0;
         try {
@@ -146,7 +152,7 @@ public class ComicLoaderCtrl {
             if (Integer.MAX_VALUE == end) {
                 List<Element> rws = chapters.toList();
                 String inHtml = rws.get(0).innerHTML();
-                String chStr = inHtml.replaceAll("Vol.[0-9]+ ", "").replaceAll("[Cc]hapter ([0-9]+).*", "$1").trim();
+                String chStr = inHtml.replaceAll(chNumberRegex, "$2").trim();
                 int lastChNum = Integer.parseInt(chStr);
                 
                 start = lastChNum - (end - start) + 1;
@@ -156,7 +162,7 @@ public class ComicLoaderCtrl {
             
             for (Element chapter : chapters) {
                 //3.1) Chapter number
-                String chNumStr = chapter.innerHTML().replaceAll("Vol.[0-9]+ ", "").replaceAll("[Cc]hapter ([0-9]+).*", "$1").trim();
+                String chNumStr = chapter.innerHTML().replaceAll(chNumberRegex, "$2").trim();
                 int chNumber = Integer.parseInt(chNumStr);
                 
                 if (chNumber < start)

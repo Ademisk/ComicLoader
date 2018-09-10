@@ -5,7 +5,8 @@ public class ArgsManager {
     final static int MANGA_NAME = 0;
     final static int ACTION = 1;
     final static int CHAPTERS = 2;
-    final static int SITE_SOURCE = 3;    
+    final static int SITE_SOURCE = 3;
+    final static int API_KEY = 4;
     
     final public static String DO_LIST_CHAPTERS = "-c";
     final public static String DO_CHAPTER_DOWNLOAD_SPECIFIC = "-Specific";
@@ -45,5 +46,9 @@ public class ArgsManager {
     
     public String getSource() {
         return args[SITE_SOURCE];
+    }
+    
+    public String getApiKey() {
+        return args[API_KEY];
     }
 }
