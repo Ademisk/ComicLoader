@@ -1,39 +1,41 @@
+import java.util.List;
+import java.util.Map;
+
 import com.jaunt.*;
 import com.jaunt.component.*;
 
 public class Example18{
   public static void main(String[] args){
     try{
-      UserAgent userAgent = new UserAgent(); 
+      UserAgent userAgent = new UserAgent();
       userAgent.visit("http://jaunt-api.com/examples/schedule.htm");
-      Table table = userAgent.doc.getTable("<table class=schedule>");   //get Table component via search query
-      
-      System.out.println("\nColumn having 'Mon':");
-      Elements elements = table.getCol("mon");                                  //get entire column containing 'Mon'
-      for(Element element : elements) System.out.println(element.outerHTML());  //iterate through &amp; print elements
-      
-      System.out.println("\nColumn below 'Tue':");                              
-      elements = table.getColBelow("tue");                                      //get column elements below 'Tue'
-      for(Element element : elements) System.out.println(element.outerHTML());  //iterate through &amp; print elements
-      
-      System.out.println("\nFirst row:");
-      elements = table.getRow(0);                                               //get row at row index 0.
-      for(Element element : elements) System.out.println(element.outerHTML());  //iterate through &amp; print elements
-      
-      System.out.println("\nRow right of '2:00pm':");
-      elements = table.getRowRightOf("2:00pm");                                 //get row elements right of 2:00pm
-      for(Element element : elements) System.out.println(element.outerHTML());  //iterate through &amp; print elements
-      
-      System.out.println("\nCell for fri at 10:00am:");                        
-      Element element = table.getCell("fri", "10:00am");             //get element at intersection of col/row
-      System.out.println(element.outerHTML());                       //print element
-      
-      System.out.println("\nCell at position 3,3:");
-      element = table.getCell(3,3);                                  //get element at col index 3, row index 3
-      System.out.println(element.outerHTML());                       //print element
+      Element tableElement = userAgent.doc.findFirst("<table class=schedule>");   //find table Element
+      Table table = new Table(tableElement);                   //create Table component
+		 
+      System.out.println("\nText of first column:");                           
+      List<String> results = table.getTextFromColumn(0);       //get text from first column
+      for(String text : results) System.out.println(text);     //iterate through results & print    
+		       
+      System.out.println("\nText of column containing 'Mon':");
+      results = table.getTextFromColumn("Mon");                //get text from column containing 'Mon'
+      for(String text : results) System.out.println(text);     //iterate through results & print
+		            
+      System.out.println("\nText of first row:");
+      results = table.getTextFromRow(0);                       //get text from first row
+      for(String text : results) System.out.println(text);     //iterate through results & print
+		     
+      System.out.println("\nText of row containing '2:00pm':");
+      results = table.getTextFromRow("2:00pm");                //get text from row containing '2:00pm'
+      for(String text : results) System.out.println(text);     //iterate through results & print
+		       
+      System.out.println("\nCreate Map of text from first two columns:"); 
+      Map<String, String> map = table.getTextFromColumns(0, 1);//create map containing text from cols 0 and 1
+      for(String key : map.keySet()){                          //print keys (from col 0) and values (from col 1)
+        System.out.println(key + ":" + map.get(key));          
+      }
     }
     catch(JauntException e){
-      System.err.println(e);
+      System.out.println(e);
     }
   }
 }

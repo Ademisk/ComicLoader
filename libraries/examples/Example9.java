@@ -14,7 +14,7 @@ public class Example9{
       elements = userAgent.doc.findEach("<div>");                        //find all non-nested divs
       System.out.println("Each div: " + elements.size() + " results");   //report number of search results.
                                                                          //find non-nested divs within <p class='meat'>
-      elements = userAgent.doc.findFirst("<p class=meat>").findEach("<div>"); 
+      elements = userAgent.doc.findFirst("<div class=meat>").findEach("<div>"); 
       System.out.println("Meat search: " + elements.size() + " results");//report number of search results.
     }
     catch(JauntException e){                          

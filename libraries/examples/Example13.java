@@ -6,14 +6,13 @@ public class Example13{
     try{
       UserAgent userAgent = new UserAgent(); 
       userAgent.visit("http://jaunt-api.com/examples/login.htm");
- 
-      userAgent.doc.fillout("Username:", "tom");       //fill out the component labelled 'Username' with "tom"
-      userAgent.doc.fillout("Password:", "secret");    //fill out the component labelled 'Password' with "secret"
-      userAgent.doc.choose(Label.RIGHT, "Remember me");//choose the component right-labelled 'Remember me'.
-      userAgent.doc.submit();                          //submit the form
-      System.out.println(userAgent.getLocation());     //print the current location (url)
+      userAgent.doc.filloutField("Username:", "tom");          //fill the field labelled 'Username:' with "tom"
+      userAgent.doc.filloutField("Password:", "secret");       //fill the field labelled 'Password:' with "secret"
+      userAgent.doc.chooseCheckBox("Remember me", Label.RIGHT);//choose the component right-labelled 'Remember me'
+      userAgent.doc.submit();                                  //submit the form
+      System.out.println(userAgent.getLocation());             //print the current location (url)
     }
-    catch(JauntException e){ 
+    catch(JauntException e){
       System.err.println(e);
     }
   }
