@@ -1,0 +1,11 @@
+Jaunt 1.5.9 (Monthly Edition) Release Notes
+
+Release date: Jun 30, 2019
+Expiry date: Aug 31, 2019
+
+Installation Instructions & Quickstart Tutorial:
+http://jaunt-api.com/jaunt-tutorial.htm
+
+CHANGES:
+
+No Changes.
